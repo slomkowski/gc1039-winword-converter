@@ -63,15 +63,15 @@ int main(int argc, char *argv[]) {
     }
 
 
-    HGLOBAL m_hFileName = GlobalAlloc(GHND, _MAX_PATH + 1);
+    HGLOBAL inputFilePathHandle = GlobalAlloc(GHND, _MAX_PATH + 1);
 
-    auto *p = (char *) GlobalLock(m_hFileName);
+    auto *p = (char *) GlobalLock(inputFilePathHandle);
     lstrcpynA(p, argv[2], _MAX_PATH);
-    GlobalUnlock(m_hFileName);
+    GlobalUnlock(inputFilePathHandle);
 
     {
         HGLOBAL hDesc = GlobalAlloc(GHND, 1024);
-        auto ret = fIsFormatCorrect32((HANDLE) m_hFileName, hDesc);
+        auto ret = fIsFormatCorrect32(inputFilePathHandle, hDesc);
         GlobalFree(hDesc);
 
         if (ret != 1) {
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
         buffer = GlobalAlloc(GHND, 10 * 1024);
 
-        auto ret = fForeignToRtf32(m_hFileName, nullptr, buffer, nullptr, nullptr, callback);
+        auto ret = fForeignToRtf32(inputFilePathHandle, nullptr, buffer, nullptr, nullptr, callback);
 
         if (buffer != nullptr) {
             GlobalUnlock(buffer);
