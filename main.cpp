@@ -18,17 +18,11 @@ extern "C" typedef FCE  PASCAL (*lib_ForeignToRtf32)(HANDLE ghszFile, void *pstg
 
 extern "C" typedef void PASCAL (*lib_GetReadNames)(HANDLE haszClass, HANDLE haszDescrip, HANDLE haszExt);
 
-HGLOBAL buffer;
+char *buffer;
 ofstream rtfFileHandle;
 
 PASCAL long callback(long cchBuff, long nPercent) {
-
-    auto *p = (char *) GlobalLock(buffer);
-
-    rtfFileHandle.write(p, cchBuff);
-
-    GlobalUnlock(buffer);
-
+    rtfFileHandle.write(buffer, cchBuff);
     return 0;
 }
 
@@ -62,18 +56,11 @@ int main(int argc, char *argv[]) {
         throw runtime_error("InitConverter32() failed");
     }
 
-
-    HGLOBAL inputFilePathHandle = GlobalAlloc(GHND, _MAX_PATH + 1);
-
-    auto *p = (char *) GlobalLock(inputFilePathHandle);
-    lstrcpynA(p, argv[2], _MAX_PATH);
-    GlobalUnlock(inputFilePathHandle);
+    auto inputFilePathHandle = HeapAlloc(GetProcessHeap(), HEAP_GENERATE_EXCEPTIONS, _MAX_PATH + 1);
+    lstrcpynA((char *) inputFilePathHandle, argv[2], _MAX_PATH);
 
     {
-        HGLOBAL hDesc = GlobalAlloc(GHND, 1024);
-        auto ret = fIsFormatCorrect32(inputFilePathHandle, hDesc);
-        GlobalFree(hDesc);
-
+        auto ret = fIsFormatCorrect32(inputFilePathHandle, nullptr);
         if (ret != 1) {
             throw runtime_error(string("IsFormatCorrect32 failed, return code ") + to_string(ret));
         }
@@ -82,14 +69,11 @@ int main(int argc, char *argv[]) {
     {
         rtfFileHandle.open(argv[3], ios::binary | ios::trunc | ios::out);
 
-        buffer = GlobalAlloc(GHND, 10 * 1024);
+        buffer = (char *) HeapAlloc(GetProcessHeap(), HEAP_GENERATE_EXCEPTIONS, 10 * 1024);
 
         auto ret = fForeignToRtf32(inputFilePathHandle, nullptr, buffer, nullptr, nullptr, callback);
 
-        if (buffer != nullptr) {
-            GlobalUnlock(buffer);
-        }
-        GlobalFree(buffer);
+        HeapFree(GetProcessHeap(), 0, buffer);
 
         if (ret != 0) {
             throw runtime_error(string("ForeignToRtf32 failed, return code ") + to_string(ret));
